@@ -10,14 +10,14 @@ function define_ODE()
     eqs = [D(x) ~ σ * (y - x),
         D(y) ~ x * (ρ - z) - y,
         D(z) ~ x * y - β * z]
-    @named sys = ODESystem(eqs)
+    @named sys = ODESystem(eqs, t, [x, y, z], [σ, ρ, β])
     sys = structural_simplify(sys)
     u0 = [x => 1.0,
         y => 0.0,
         z => 0.0]
     p = [σ => 10.0,
-        ρ => 28.0,
-        β => 8 / 3]
+        ρ => 15.0,
+        β => 5]
 
     tspan = (0.0, 100.0)
     ODEProblem(sys, u0, tspan, p, jac=true)
@@ -29,10 +29,10 @@ prob = define_ODE()
 @handlers begin
     @private integrator = DifferentialEquations.init(prob, Tsit5())
     @in σ = 10
-    @in ρ = 28.0
-    @in β = 8 / 3
+    @in ρ = 15.0
+    @in β = 5
     @out t::Float32 = 0.0
-    @in t_step = 0.03
+    @in t_step = 0.001
     @in t_end = 10
     @in start = false
     @out solplot = PlotData()
