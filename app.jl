@@ -1,4 +1,5 @@
 module App
+# using PlotlyBase
 using GenieFramework, StippleLatex, DifferentialEquations, ModelingToolkit
 @genietools
 
@@ -25,42 +26,51 @@ end
 
 prob = define_ODE()
 
-
 @handlers begin
     @private integrator = DifferentialEquations.init(prob, Tsit5())
-    @in σ = 10
+    @in σ = 10.0
     @in ρ = 15.0
-    @in β = 5
+    @in β = 5.0
     @out t::Float32 = 0.0
-    @in t_step = 0.001
+    @in t_step = 0.1
     @in t_end = 10
     @in start = false
     @out solplot = PlotData()
     @out layout = PlotLayout(
-        xaxis=[PlotLayoutAxis(xy="x", title="x")],
-        yaxis=[PlotLayoutAxis(xy="y", title="y")])
-    @private u_x = []
-    @private u_y = []
+        xaxis=[PlotLayoutAxis(xy="x", title="x", range=[-20, 20])],
+        yaxis=[PlotLayoutAxis(xy="y", title="y", range=[-20, 20])])
+    @private u_x = Float32[]
+    @private u_y = Float32[]
     @private running = false
     @onchange start begin
         DifferentialEquations.reinit!(integrator)
-        u_x = []
-        u_y = []
+        u_x = Float32[]
+        u_y = Float32[]
         t = 0.0
+        integrator = DifferentialEquations.init(prob, Tsit5())
         if running == false
             running = true
             @async begin
                 while t <= t_end
                     sleep(t_step)
-                    solplot = PlotData(x=u_x, y=u_y, z=u_x, plot=StipplePlotly.Charts.PLOT_TYPE_LINE)
-                    integrator.p[1] = σ
-                    integrator.p[2] = ρ
-                    integrator.p[3] = β
+                    solplot = PlotData(x=u_x, y=u_y, z=u_x, plot=StipplePlotly.Charts.PLOT_TYPE_SCATTER)
+                    integrator.p[1][3] = σ
+                    integrator.p[1][1] = ρ
+                    integrator.p[1][2] = β
                     step!(integrator, t_step, true)
-                    l = length(integrator.sol.u)
-                    append!(u_x, [u[1] for u in integrator.sol.u[l:end]][:])
-                    append!(u_y, [u[2] for u in integrator.sol.u[l:end]][:])
+                    append!(u_x, integrator.sol.u[end][1])
+                    append!(u_y, integrator.sol.u[end][2])
+
+                    if (length(u_x) > 25)
+                        popfirst!(u_x)
+                        popfirst!(u_y)
+                    end
+
+
                     t = integrator.sol.t[end]
+                    if !(t <= t_end)
+                        break
+                    end
                 end
                 running = false
             end
